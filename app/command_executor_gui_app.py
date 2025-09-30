@@ -249,15 +249,34 @@ class CommandExecutorApp:
             row=3, column=0, sticky=tk.W, pady=(0, 5)
         )
 
-        # Scrollable text field for results
-        self.results_text = scrolledtext.ScrolledText(
-            command_frame,
-            wrap=tk.WORD,
+        # Scrollable text field for results with both scrollbars
+        results_container = ttk.Frame(command_frame)
+        results_container.grid(
+            row=4, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 10)
+        )
+        results_container.columnconfigure(0, weight=1)
+        results_container.rowconfigure(0, weight=1)
+
+        self.results_text = tk.Text(
+            results_container,
+            wrap=tk.NONE,
             font=Config.GUI_RESULTS_TEXT_FONT,
             state=tk.DISABLED,
         )
-        self.results_text.grid(
-            row=4, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 10)
+        self.results_text.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+
+        results_vscroll = ttk.Scrollbar(
+            results_container, orient=tk.VERTICAL, command=self.results_text.yview
+        )
+        results_vscroll.grid(row=0, column=1, sticky=(tk.N, tk.S))
+
+        results_hscroll = ttk.Scrollbar(
+            results_container, orient=tk.HORIZONTAL, command=self.results_text.xview
+        )
+        results_hscroll.grid(row=1, column=0, sticky=(tk.W, tk.E))
+
+        self.results_text.configure(
+            yscrollcommand=results_vscroll.set, xscrollcommand=results_hscroll.set
         )
 
     def create_control_panel(self, parent):
@@ -294,6 +313,13 @@ class CommandExecutorApp:
             state=tk.DISABLED,
         )
         self.execute_button.pack(side=tk.LEFT, padx=(0, 5))
+
+        self.expand_output_button = ttk.Button(
+            button_frame,
+            text="Expand Output",
+            command=self.open_results_window,
+        )
+        self.expand_output_button.pack(side=tk.LEFT, padx=(0, 5))
 
         self.clear_button = ttk.Button(
             button_frame,
@@ -855,6 +881,65 @@ class CommandExecutorApp:
     def _reset_execute_button(self):
         self.execute_button.config(state=tk.NORMAL, text="Execute Command")
         self.update_selection_info()
+
+    def open_results_window(self):
+        window = tk.Toplevel(self.root)
+        window.title("Command Output")
+        window.geometry("900x600")
+        window.minsize(600, 400)
+
+        window.columnconfigure(0, weight=1)
+        window.rowconfigure(0, weight=1)
+
+        container = ttk.Frame(window, padding="10")
+        container.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        container.columnconfigure(0, weight=1)
+        container.rowconfigure(0, weight=1)
+
+        text_widget = tk.Text(
+            container,
+            wrap=tk.NONE,
+            font=Config.GUI_RESULTS_TEXT_FONT,
+        )
+        text_widget.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+
+        vscroll = ttk.Scrollbar(
+            container, orient=tk.VERTICAL, command=text_widget.yview
+        )
+        vscroll.grid(row=0, column=1, sticky=(tk.N, tk.S))
+
+        hscroll = ttk.Scrollbar(
+            container, orient=tk.HORIZONTAL, command=text_widget.xview
+        )
+        hscroll.grid(row=1, column=0, sticky=(tk.W, tk.E))
+
+        text_widget.configure(yscrollcommand=vscroll.set, xscrollcommand=hscroll.set)
+        text_widget.insert(tk.END, self.results_text.get("1.0", tk.END))
+        text_widget.focus_set()
+
+        button_bar = ttk.Frame(container)
+        button_bar.grid(row=2, column=0, columnspan=2, sticky=tk.E, pady=(5, 0))
+        ttk.Button(
+            button_bar,
+            text="Copy Output",
+            command=self.copy_results_to_clipboard,
+        ).pack(side=tk.RIGHT)
+
+    def copy_results_to_clipboard(self):
+        content = self.results_text.get("1.0", tk.END)
+        if not content.strip():
+            self.status_label.config(
+                text="Output buffer is empty", foreground=Config.get_color("status_info")
+            )
+            self.root.after(3000, lambda: self.update_selection_info())
+            return
+
+        self.root.clipboard_clear()
+        self.root.clipboard_append(content)
+        self.status_label.config(
+            text="Output copied to clipboard", foreground=Config.get_color("status_info")
+        )
+        self.root.after(3000, lambda: self.update_selection_info())
 
     def append_result(self, text):
         def _append():
