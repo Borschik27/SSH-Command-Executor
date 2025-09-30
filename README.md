@@ -60,8 +60,8 @@ python3 app/main.py --cli
 # Complete help for all parameters
 python3 app/main.py --help
 
-# Launch via shell script (GUI)
-./app/run_gui.sh
+# Launch via shell script (auto-detects GUI/CLI)
+./run.sh
 ```
 
 ### Commands with Parameters
@@ -168,7 +168,7 @@ SECURITY = {
 - `command_executor_cli_app.py` - CLI implementation with security prompts
 - `ssh_config_parser.py` - SSH configuration parser with grouping
 - `ssh_executor.py` - SSH command execution with logging and security checks
-- `run_gui.sh` - Automatic launch script
+- `run.sh` - Automatic launch script
 - `README.md` - Usage documentation
 - `SECURITY_IMPROVEMENTS.md` - Security features documentation
 

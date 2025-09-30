@@ -170,7 +170,7 @@ PROJECT FILES:
     config.py                      - Settings and configuration
     ssh_config_parser.py           - SSH configuration parser
     ssh_executor.py                - SSH command execution
-    run_gui.sh                     - Startup script
+    run.sh                         - Startup script
         """.strip()
     )
 

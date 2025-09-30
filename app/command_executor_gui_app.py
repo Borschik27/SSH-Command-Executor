@@ -120,7 +120,8 @@ class CommandExecutorApp:
         self.hosts_tree = ttk.Treeview(
             tree_frame,
             selectmode="extended",
-            columns=("checkbox",),
+            columns=("checkbox", "hostname"),
+            displaycolumns=("checkbox",),
             show="tree headings",
         )
         self.hosts_tree.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
@@ -137,6 +138,7 @@ class CommandExecutorApp:
         self.hosts_tree.heading(
             "checkbox", text=Config.get_gui_symbol("checkbox_header")
         )
+        self.hosts_tree.heading("hostname", text="Hostname")
         self.hosts_tree.column(
             "#0",
             width=Config.GUI_TREE_HOST_COLUMN_WIDTH,
@@ -148,6 +150,7 @@ class CommandExecutorApp:
             minwidth=Config.GUI_TREE_CHECKBOX_COLUMN_MIN_WIDTH,
             anchor="center",
         )
+        self.hosts_tree.column("hostname", width=0, minwidth=0, stretch=False)
 
         # Style configuration for highlighting
         self.hosts_tree.tag_configure(
@@ -343,7 +346,7 @@ class CommandExecutorApp:
                     "",
                     "end",
                     text=group_display,
-                    values=(Config.get_gui_symbol("unchecked"),),
+                    values=(Config.get_gui_symbol("unchecked"), ""),
                     tags=("group",),
                 )
 
@@ -423,11 +426,9 @@ class CommandExecutorApp:
                 self.hosts_tree.item(item_id, open=not current_open)
 
     def toggle_host_selection(self, host_id):
-        values = self.hosts_tree.item(host_id, "values")
-        if len(values) < 2:
+        hostname = self.hosts_tree.set(host_id, "hostname")
+        if not hostname:
             return
-
-        hostname = values[1]  # hostname now in second element of values
         if hostname in self.selected_hosts:
             self.selected_hosts.remove(hostname)
             self.hosts_tree.set(host_id, "checkbox", Config.get_gui_symbol("unchecked"))
@@ -446,20 +447,17 @@ class CommandExecutorApp:
         # Check whether every host in the group is already selected
         all_selected = True
         for child_id in children:
-            values = self.hosts_tree.item(child_id, "values")
-            if len(values) >= 2:
-                hostname = values[1]
-                if hostname not in self.selected_hosts:
-                    all_selected = False
-                    break
+            hostname = self.hosts_tree.set(child_id, "hostname")
+            if hostname and hostname not in self.selected_hosts:
+                all_selected = False
+                break
 
         # Toggle selection state for the whole group
         if all_selected:
             # Remove selection from each host in the group
             for child_id in children:
-                values = self.hosts_tree.item(child_id, "values")
-                if len(values) >= 2:
-                    hostname = values[1]
+                hostname = self.hosts_tree.set(child_id, "hostname")
+                if hostname:
                     if hostname in self.selected_hosts:
                         self.selected_hosts.remove(hostname)
                     self.hosts_tree.set(
@@ -471,9 +469,8 @@ class CommandExecutorApp:
         else:
             # Select every host in the group
             for child_id in children:
-                values = self.hosts_tree.item(child_id, "values")
-                if len(values) >= 2:
-                    hostname = values[1]
+                hostname = self.hosts_tree.set(child_id, "hostname")
+                if hostname:
                     if hostname not in self.selected_hosts:
                         self.selected_hosts.add(hostname)
                     self.hosts_tree.set(
@@ -498,9 +495,8 @@ class CommandExecutorApp:
         tags = self.hosts_tree.item(item_id, "tags")
 
         if "host" in tags:
-            values = self.hosts_tree.item(item_id, "values")
-            if len(values) >= 2:
-                hostname = values[1]
+            hostname = self.hosts_tree.set(item_id, "hostname")
+            if hostname:
                 self.show_host_info_dialog(hostname)
 
     def show_host_info_dialog(self, hostname):
@@ -566,7 +562,7 @@ class CommandExecutorApp:
                 if result["success"]:
                     message = f"Connection successful: {result['output']}\n"
                 else:
-                    message = f"Error connection: {result['error']}\n"
+                    message = f"Connection error: {result['error']}\n"
             except Exception as exc:  # pragma: no cover - asynchronous error
                 message = f"Exception: {exc}\n"
             self.root.after(0, lambda: append_text(message))
@@ -602,8 +598,8 @@ class CommandExecutorApp:
         if self.context_item:
             tags = self.hosts_tree.item(self.context_item, "tags")
             if "host" in tags:
-                values = self.hosts_tree.item(self.context_item, "values")
-                if len(values) >= 2 and values[1] in self.selected_hosts:
+                hostname = self.hosts_tree.set(self.context_item, "hostname")
+                if hostname in self.selected_hosts:
                     self.toggle_host_selection(self.context_item)
 
     def context_show_info(self):
@@ -611,18 +607,18 @@ class CommandExecutorApp:
         if self.context_item:
             tags = self.hosts_tree.item(self.context_item, "tags")
             if "host" in tags:
-                values = self.hosts_tree.item(self.context_item, "values")
-                if len(values) >= 2:
-                    self.show_host_info_dialog(values[1])
+                hostname = self.hosts_tree.set(self.context_item, "hostname")
+                if hostname:
+                    self.show_host_info_dialog(hostname)
 
     def context_test_connection(self):
         # Run quick connection test from context menu
         if self.context_item:
             tags = self.hosts_tree.item(self.context_item, "tags")
             if "host" in tags:
-                values = self.hosts_tree.item(self.context_item, "values")
-                if len(values) >= 2:
-                    self.quick_test_connection(values[1])
+                hostname = self.hosts_tree.set(self.context_item, "hostname")
+                if hostname:
+                    self.quick_test_connection(hostname)
 
     def quick_test_connection(self, hostname):
         # Quick connection test with status bar feedback
@@ -676,9 +672,8 @@ class CommandExecutorApp:
             self.hosts_tree.set(group_id, "checkbox", Config.get_gui_symbol("checked"))
 
             for host_id in self.hosts_tree.get_children(group_id):
-                values = self.hosts_tree.item(host_id, "values")
-                if len(values) >= 2:
-                    hostname = values[1]
+                hostname = self.hosts_tree.set(host_id, "hostname")
+                if hostname:
                     self.selected_hosts.add(hostname)
                     self.hosts_tree.set(
                         host_id, "checkbox", Config.get_gui_symbol("checked")
