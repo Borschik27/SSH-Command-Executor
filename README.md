@@ -31,6 +31,8 @@ A tool for executing SSH commands with both graphical and console interfaces
 
 ## GUI Capabilities
 
+<img width="1011" height="731" alt="Screenshot 2025-09-30 131604" src="https://github.com/user-attachments/assets/8bcc702e-f26d-4da0-8888-9edc4394cb35" />
+
 - Checkboxes for selecting hosts and groups
 - Alphabetical host grouping with natural sorting
 - Prefix filtering with clear button
