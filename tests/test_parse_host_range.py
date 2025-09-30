@@ -40,6 +40,11 @@ class ParseHostRangeTests(unittest.TestCase):
         self.assertIn("Invalid host number: foo", output)
         self.assertIn("Invalid range: 2-abc", output)
 
+    def test_duplicates_and_overlaps_are_deduplicated(self):
+        result = parse_host_range("1,3-5,2-4,5,3", hosts_count=10)
+
+        # Numbers should be unique and sorted even with overlapping segments
+        self.assertEqual(result, [1, 2, 3, 4, 5])
 
 if __name__ == "__main__":  # pragma: no cover
     unittest.main()

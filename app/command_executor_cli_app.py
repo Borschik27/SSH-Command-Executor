@@ -139,7 +139,10 @@ def main(args=None):
                 show_hosts_list(host_index, parser)
 
         except KeyboardInterrupt:
-            print(f"\n\n{Config.get_cli_symbol('wave')} Exit by Ctrl+C")
+            print(
+                f"\n\n{Config.get_cli_symbol('wave')} "
+                f"{Config.get_message('goodbye_cli')}"
+            )
             break
         except (
             Exception

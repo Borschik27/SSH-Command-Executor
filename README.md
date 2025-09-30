@@ -186,7 +186,7 @@ SECURITY = {
 - `ssh_executor.py` - SSH command execution with logging and security checks
 - `run.sh` - Automatic launch script
 - `README.md` - Usage documentation
-- `SECURITY_IMPROVEMENTS.md` - Security features documentation
+- `tests/` - Automated tests for critical helpers such as host range parsing
 
 ## Example Use Cases
 

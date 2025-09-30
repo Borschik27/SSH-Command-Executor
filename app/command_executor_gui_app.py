@@ -194,6 +194,25 @@ class CommandExecutorApp:
         # Variable to store selected context menu item
         self.context_item = None
 
+    def _get_hostname_for_item(self, item_id: str) -> str:
+        """Return the host alias stored for the given tree item."""
+
+        if not item_id:
+            return ""
+
+        hostname = ""
+        if "hostname" in self.hosts_tree["columns"]:
+            hostname = self.hosts_tree.set(item_id, "hostname")
+
+        if hostname:
+            return hostname
+
+        text_value = self.hosts_tree.item(item_id, "text")
+        if not text_value:
+            return ""
+
+        return text_value.split(" (", 1)[0]
+
     def create_command_panel(self, parent):
         # Command frame
         command_frame = ttk.LabelFrame(parent, text="Command Execution", padding="5")
@@ -452,7 +471,7 @@ class CommandExecutorApp:
                 self.hosts_tree.item(item_id, open=not current_open)
 
     def toggle_host_selection(self, host_id):
-        hostname = self.hosts_tree.set(host_id, "hostname")
+        hostname = self._get_hostname_for_item(host_id)
         if not hostname:
             return
         if hostname in self.selected_hosts:
@@ -473,7 +492,7 @@ class CommandExecutorApp:
         # Check whether every host in the group is already selected
         all_selected = True
         for child_id in children:
-            hostname = self.hosts_tree.set(child_id, "hostname")
+            hostname = self._get_hostname_for_item(child_id)
             if hostname and hostname not in self.selected_hosts:
                 all_selected = False
                 break
@@ -482,7 +501,7 @@ class CommandExecutorApp:
         if all_selected:
             # Remove selection from each host in the group
             for child_id in children:
-                hostname = self.hosts_tree.set(child_id, "hostname")
+                hostname = self._get_hostname_for_item(child_id)
                 if hostname:
                     if hostname in self.selected_hosts:
                         self.selected_hosts.remove(hostname)
@@ -495,7 +514,7 @@ class CommandExecutorApp:
         else:
             # Select every host in the group
             for child_id in children:
-                hostname = self.hosts_tree.set(child_id, "hostname")
+                hostname = self._get_hostname_for_item(child_id)
                 if hostname:
                     if hostname not in self.selected_hosts:
                         self.selected_hosts.add(hostname)
@@ -521,7 +540,7 @@ class CommandExecutorApp:
         tags = self.hosts_tree.item(item_id, "tags")
 
         if "host" in tags:
-            hostname = self.hosts_tree.set(item_id, "hostname")
+            hostname = self._get_hostname_for_item(item_id)
             if hostname:
                 self.show_host_info_dialog(hostname)
 
@@ -624,7 +643,7 @@ class CommandExecutorApp:
         if self.context_item:
             tags = self.hosts_tree.item(self.context_item, "tags")
             if "host" in tags:
-                hostname = self.hosts_tree.set(self.context_item, "hostname")
+                hostname = self._get_hostname_for_item(self.context_item)
                 if hostname in self.selected_hosts:
                     self.toggle_host_selection(self.context_item)
 
@@ -633,7 +652,7 @@ class CommandExecutorApp:
         if self.context_item:
             tags = self.hosts_tree.item(self.context_item, "tags")
             if "host" in tags:
-                hostname = self.hosts_tree.set(self.context_item, "hostname")
+                hostname = self._get_hostname_for_item(self.context_item)
                 if hostname:
                     self.show_host_info_dialog(hostname)
 
@@ -642,7 +661,7 @@ class CommandExecutorApp:
         if self.context_item:
             tags = self.hosts_tree.item(self.context_item, "tags")
             if "host" in tags:
-                hostname = self.hosts_tree.set(self.context_item, "hostname")
+                hostname = self._get_hostname_for_item(self.context_item)
                 if hostname:
                     self.quick_test_connection(hostname)
 
@@ -698,7 +717,7 @@ class CommandExecutorApp:
             self.hosts_tree.set(group_id, "checkbox", Config.get_gui_symbol("checked"))
 
             for host_id in self.hosts_tree.get_children(group_id):
-                hostname = self.hosts_tree.set(host_id, "hostname")
+                hostname = self._get_hostname_for_item(host_id)
                 if hostname:
                     self.selected_hosts.add(hostname)
                     self.hosts_tree.set(
@@ -717,6 +736,9 @@ class CommandExecutorApp:
             )
 
             for host_id in self.hosts_tree.get_children(group_id):
+                hostname = self._get_hostname_for_item(host_id)
+                if hostname and hostname in self.selected_hosts:
+                    self.selected_hosts.remove(hostname)
                 self.hosts_tree.set(
                     host_id, "checkbox", Config.get_gui_symbol("unchecked")
                 )
