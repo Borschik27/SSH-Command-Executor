@@ -929,7 +929,8 @@ class CommandExecutorApp:
         content = self.results_text.get("1.0", tk.END)
         if not content.strip():
             self.status_label.config(
-                text="Output buffer is empty", foreground=Config.get_color("status_info")
+                text="Output buffer is empty",
+                foreground=Config.get_color("status_info"),
             )
             self.root.after(3000, lambda: self.update_selection_info())
             return
@@ -937,7 +938,8 @@ class CommandExecutorApp:
         self.root.clipboard_clear()
         self.root.clipboard_append(content)
         self.status_label.config(
-            text="Output copied to clipboard", foreground=Config.get_color("status_info")
+            text="Output copied to clipboard",
+            foreground=Config.get_color("status_info"),
         )
         self.root.after(3000, lambda: self.update_selection_info())
 
