@@ -1,6 +1,6 @@
-# Command Executor v0.1
+# Command Executor
 
-A tool for executing SSH commands with both graphical and console interfaces, featuring built-in security protection and command logging.
+A tool for executing SSH commands with both graphical and console interfaces
 
 ## Key Features
 
@@ -31,6 +31,8 @@ A tool for executing SSH commands with both graphical and console interfaces, fe
 
 ## GUI Capabilities
 
+<img width="1011" height="731" alt="Screenshot 2025-09-30 131604" src="https://github.com/user-attachments/assets/8bcc702e-f26d-4da0-8888-9edc4394cb35" />
+
 - Checkboxes for selecting hosts and groups
 - Alphabetical host grouping with natural sorting
 - Prefix filtering with clear button
@@ -38,6 +40,9 @@ A tool for executing SSH commands with both graphical and console interfaces, fe
 - "Expand All" / "Collapse All" group buttons
 - Context menu (right-click)
 - Host information dialog (double-click)
+
+  <img width="409" height="331" alt="image" src="https://github.com/user-attachments/assets/f92d9bc5-2598-4331-a375-688ca68d71ba" />
+
 - Command execution with sudo option
 - Detailed/brief output modes
 - Security confirmation dialogs
