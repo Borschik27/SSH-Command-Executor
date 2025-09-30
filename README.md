@@ -1,6 +1,6 @@
-# Command Executor v0.1
+# Command Executor
 
-A tool for executing SSH commands with both graphical and console interfaces, featuring built-in security protection and command logging.
+A tool for executing SSH commands with both graphical and console interfaces
 
 ## Key Features
 
