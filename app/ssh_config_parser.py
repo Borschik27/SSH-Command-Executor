@@ -7,6 +7,12 @@ from typing import Dict, List, Optional
 from config import Config
 
 
+def _is_pattern_host(alias: str) -> bool:
+    if not alias:
+        return True
+    return alias == "*" or any(char in alias for char in "*?")
+
+
 def natural_sort_key(hostname: str) -> tuple:
     # Create key for natural host sorting with grouping
     # Args:
@@ -134,7 +140,6 @@ class SSHConfigParser:
             self.parse_config()
 
         if not prefix:
-            # Return all hosts if prefix is not specified
             hosts = list(self.hosts.keys())
         else:
             hosts = [
@@ -143,7 +148,7 @@ class SSHConfigParser:
                 if host.lower().startswith(prefix.lower())
             ]
 
-        # Use natural sorting key
+        hosts = [host for host in hosts if not _is_pattern_host(host)]
         return sorted(hosts, key=natural_sort_key)
 
     def get_grouped_hosts_with_prefix(self, prefix: str = "") -> Dict[str, List[str]]:
@@ -161,7 +166,10 @@ class SSHConfigParser:
         if not self.hosts:
             self.parse_config()
 
-        return sorted(list(self.hosts.keys()), key=natural_sort_key)
+        return sorted(
+            [host for host in self.hosts.keys() if not _is_pattern_host(host)],
+            key=natural_sort_key,
+        )
 
 
 if __name__ == "__main__":

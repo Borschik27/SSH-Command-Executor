@@ -31,7 +31,7 @@ A tool for executing SSH commands with both graphical and console interfaces
 
 ## GUI Capabilities
 
-  <img width="1011" height="731" alt="Screenshot 2025-09-30 131604" src="https://github.com/user-attachments/assets/8bcc702e-f26d-4da0-8888-9edc4394cb35" />
+![Screenshot of the GUI main window](https://github.com/user-attachments/assets/8bcc702e-f26d-4da0-8888-9edc4394cb35)
 
 - Checkboxes for selecting hosts and groups
 - Alphabetical host grouping with natural sorting
@@ -41,7 +41,7 @@ A tool for executing SSH commands with both graphical and console interfaces
 - Context menu (right-click)
 - Host information dialog (double-click)
 
-  <img width="409" height="331" alt="image" src="https://github.com/user-attachments/assets/f92d9bc5-2598-4331-a375-688ca68d71ba" />
+![Screenshot of the host info dialog](https://github.com/user-attachments/assets/f92d9bc5-2598-4331-a375-688ca68d71ba)
 
 - Command execution with sudo option
 - Detailed/brief output modes
@@ -74,7 +74,7 @@ Also you can run the application on Windows using PowerShell:
 1. Install Python 3.6+ from [python.org](https://www.python.org/downloads/)
 2. Run PowerShell commands:
 
-```pc
+```powershell
 # Start in Windows (PowerShell)
 PS > cd "$env:USERPROFILE\path\to\project"
 PS > py -<py_version> .\app\main.py --config "$env:USERPROFILE\path\to\config" --gui

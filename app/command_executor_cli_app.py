@@ -106,6 +106,16 @@ def main(args=None):
             host_index[index] = host
             index += 1
 
+    if host_index:
+        print(f"\n{Config.get_cli_symbol('computer')} Available hosts:")
+        for num in sorted(host_index.keys()):
+            host = host_index[num]
+            host_info = parser.get_host_info(host)
+            extra = ""
+            if host_info and "hostname" in host_info:
+                extra = f" ({host_info['hostname']})"
+            print(f"  {num:>2}. {host}{extra}")
+
     print(Config.get_message("total_hosts_info", total=len(parser.get_all_hosts())))
     print("\n" + separator)
 

@@ -797,8 +797,11 @@ class CommandExecutorApp:
             return
 
         # Sudo
+        sudo_enabled = self.sudo_var.get()
+        verbose_enabled = self.verbose_var.get()
+
         command = base_command
-        if self.sudo_var.get():
+        if sudo_enabled:
             if not command.startswith("sudo "):
                 command = f"sudo {command}"
 
@@ -829,15 +832,22 @@ class CommandExecutorApp:
 
         thread = threading.Thread(
             target=self._execute_command_thread,
-            args=(command, sorted(self.selected_hosts, key=lambda host: host.lower())),
+            args=(
+                command,
+                sorted(self.selected_hosts, key=lambda host: host.lower()),
+                sudo_enabled,
+                verbose_enabled,
+            ),
         )
         thread.daemon = True
         thread.start()
 
-    def _execute_command_thread(self, command, hosts):
+    def _execute_command_thread(
+        self, command, hosts, sudo_enabled: bool, verbose_enabled: bool
+    ):
         try:
-            sudo_info = " (sudo)" if self.sudo_var.get() else ""
-            verbose_info = " (detailed output)" if self.verbose_var.get() else ""
+            sudo_info = " (sudo)" if sudo_enabled else ""
+            verbose_info = " (detailed output)" if verbose_enabled else ""
 
             self.append_result(
                 f"\nExecuting command: {command}{sudo_info}{verbose_info}\n"
@@ -847,7 +857,7 @@ class CommandExecutorApp:
 
             # Execute command on each host
             for host in hosts:
-                if self.verbose_var.get():
+                if verbose_enabled:
                     self.append_result(f"\nHost: {host}\n")
                 else:
                     self.append_result(f"\n{host}: ")
@@ -855,9 +865,9 @@ class CommandExecutorApp:
                 try:
                     result = self.ssh_executor.execute_command(host, command)
                     if result["success"]:
-                        if self.verbose_var.get():
+                        if verbose_enabled:
                             self.append_result(
-                                f"Success (code: {result['return_code']}):\n{result['output']}\n"
+                                f"Success:\n{result['output']}\n"
                             )
                             if result["error"]:
                                 self.append_result(f"Warnings:\n{result['error']}\n")
@@ -870,9 +880,9 @@ class CommandExecutorApp:
                             )
                             self.append_result(f"{output.replace(chr(10), ' ')}\n")
                     else:
-                        if self.verbose_var.get():
+                        if verbose_enabled:
                             self.append_result(
-                                f"Error (code: {result['return_code']}):\n{result['error']}\n"
+                                f"Error:\n{result['error']}\n"
                             )
                         else:
                             error = (
@@ -883,12 +893,12 @@ class CommandExecutorApp:
                             self.append_result(f"{error.replace(chr(10), ' ')}\n")
 
                 except Exception as exc:
-                    if self.verbose_var.get():
+                    if verbose_enabled:
                         self.append_result(f"Exception: {exc}\n")
                     else:
                         self.append_result(f"Error: {str(exc)[:50]}...\n")
 
-                if self.verbose_var.get():
+                if verbose_enabled:
                     self.append_result("-" * 40 + "\n")
 
             self.append_result(f"\nExecution completed on {len(hosts)} hosts\n")
