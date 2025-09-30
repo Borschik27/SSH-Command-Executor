@@ -46,13 +46,6 @@ A tool for executing SSH commands with both graphical and console interfaces
 - Command execution with sudo option
 - Detailed/brief output modes
 - Security confirmation dialogs
-
-  <img width="310" height="348" alt="image" src="https://github.com/user-attachments/assets/3b58cc67-cd7d-4c8d-8630-ff4330fc8736" />
-
-  <img width="366" height="427" alt="image" src="https://github.com/user-attachments/assets/ef38698c-50c8-430a-a641-8f970e692998" />
-
-  <img width="304" height="340" alt="image" src="https://github.com/user-attachments/assets/67ed7c9b-ecd8-4402-8ad5-d281f9c74a84" />
-
 - Dangerous command blocking with explanations
 
 ## Usage
