@@ -1,167 +1,213 @@
 # Command Executor v0.1
 
-Инструмент для выполнения SSH команд с графическим и консольным интерфейсами.
+A tool for executing SSH commands with both graphical and console interfaces, featuring built-in security protection and command logging.
 
-## Основные возможности
+## Key Features
 
-- **Группировка**: Хосты автоматически группируются по первому символу с естественной сортировкой
-- **Централизованная конфигурация**: Все настройки вынесены в config.py
-- **--help**: Поддержка параметров с --help
-- **Префиксы**: Фильтрация хостов по префиксу
-- **Чекбоксы**: Выбор отдельных хостов или целых групп
-- **GUI версия**: Графический интерфейс
-- **CLI версия**: Консольный интерфейс
-- **Автоматический fallback**: GUI → CLI при отсутствии tkinter
-- **Массовое выполнение**: Команды на множестве хостов одновременно
-- **Информация о хостах**: Просмотр конфигурации SSH для каждого хоста по очереди
-- **Тест подключения**: Проверка доступности хостов
+- **Host Grouping**: Hosts are automatically grouped by first character with natural sorting
+- **Centralized Configuration**: All settings are managed in config.py
+- **Security Protection**: Built-in dangerous command detection and confirmation dialogs
+- **Command Logging**: Automatic audit logging of all SSH operations
+- **--help Support**: Full command-line argument support with help
+- **Prefix Filtering**: Filter hosts by prefix pattern
+- **Checkboxes**: Select individual hosts or entire groups
+- **GUI Version**: Graphical interface with dialogs and confirmations
+- **CLI Version**: Console interface with interactive security prompts
+- **Auto Fallback**: GUI → CLI when tkinter is unavailable
+- **Batch Execution**: Commands on multiple hosts simultaneously
+- **Host Information**: View SSH configuration for each host
+- **Connection Testing**: Check host availability and connectivity
 
-## Возможности GUI
+## Security Features
 
-- Чекбоксы для выбора хостов и групп
-- Группировка хостов по алфавиту с естественной сортировкой  
-- Фильтрация по префиксу с кнопкой очистки
-- Кнопки "Выбрать все" / "Снять выбор"
-- Кнопки "Развернуть все" / "Свернуть все" группы
-- Контекстное меню (правый клик)
-- Информация о хостах (двойной клик)
-- Выполнение команд с sudo
-- Подробный/краткий вывод результатов
+- **Dangerous Command Detection**: Automatically blocks potentially destructive commands
+  - `rm -rf`, `dd if=`, `mkfs`, `format`, `chmod 777`, etc.
+- **Confirmation Dialogs**: Interactive confirmation for system-level commands
+  - `sudo`, `systemctl`, `service`, `mount`, `umount`, etc.
+- **Audit Logging**: Complete logging of all command executions
+  - Location: `~/.ssh/command_executor_logs/`
+  - Format: `ssh_commands_YYYY-MM-DD.log`
+- **Configurable Security Policies**: Centralized security rules in config.py
 
-## Запуск
+## GUI Capabilities
 
-### Основные команды
+- Checkboxes for selecting hosts and groups
+- Alphabetical host grouping with natural sorting
+- Prefix filtering with clear button
+- "Select All" / "Deselect All" buttons
+- "Expand All" / "Collapse All" group buttons
+- Context menu (right-click)
+- Host information dialog (double-click)
+- Command execution with sudo option
+- Detailed/brief output modes
+- Security confirmation dialogs
+- Dangerous command blocking with explanations
+
+## Usage
+
+### Basic Commands
 
 ```bash
-# Автоматический выбор интерфейса (GUI или CLI)
+# Automatic interface selection (GUI or CLI)
 python3 app/main.py
 
-# Принудительный запуск GUI
+# Force GUI mode
 python3 app/main.py --gui
 
-# Принудительный запуск CLI
+# Force CLI mode
 python3 app/main.py --cli
 
-# Полная справка по всем параметрам
+# Complete help for all parameters
 python3 app/main.py --help
 
-# Запуск через shell-скрипт (GUI)
+# Launch via shell script (GUI)
 ./app/run_gui.sh
 ```
 
-### Команды с параметрами
+### Commands with Parameters
 
 ```bash
-# Фильтрация хостов по префиксу
+# Filter hosts by prefix
 python3 app/main.py --prefix web
 python3 app/main.py -p prod
 
-# Использование другого SSH config
+# Use different SSH config
 python3 app/main.py --config ~/.ssh/production
 
-# Настройки тайм-аутов
+# Timeout settings
 python3 app/main.py --timeout 60 --connect-timeout 5
 
-# Подробный вывод и отладка
+# Verbose output and debugging
 python3 app/main.py --verbose --debug
 
-# Комбинированные команды
+# Combined commands
 python3 app/main.py --gui --prefix f --verbose
 python3 app/main.py --cli --config ~/.ssh/test --debug
 ```
 
-### Диагностические команды
+### Diagnostic Commands
 
 ```bash
-# Проверка SSH конфигурации
+# Check SSH configuration
 python3 app/main.py --test-config
 
-# Показать все доступные хосты
+# Show all available hosts
 python3 app/main.py --list-hosts
 
-# Показать хосты с префиксом
+# Show hosts with prefix
 python3 app/main.py --list-hosts --prefix web
 
-# Версия приложения
+# Application version
 python3 app/main.py --version
 ```
 
-## Использование
+## How to Use
 
-### GUI версия
+### GUI Version
 
-1. Запустите `python3 app/main.py` или `python3 app/main.py --gui`
-2. Введите префикс в поле "Префикс" (или оставьте пустым для всех хостов)
-3. Нажмите "Загрузить" или "Очистить"
-4. Выберите хосты с помощью чекбоксов (отдельные хосты или целые группы)
-5. Введите команду для выполнения
-6. Настройте опции: sudo, подробный вывод
-7. Нажмите "Выполнить команду"
+1. Run `python3 app/main.py` or `python3 app/main.py --gui`
+2. Enter prefix in "Prefix" field (or leave empty for all hosts)
+3. Click "Load" or "Clear"
+4. Select hosts using checkboxes (individual hosts or entire groups)
+5. Enter command to execute
+6. Configure options: sudo, verbose output
+7. Click "Execute Command"
+8. Review security warnings and confirmations if prompted
 
-### CLI версия
+### CLI Version
 
-1. Запустите `python3 app/main.py --cli`
-2. Введите префикс при запросе (или Enter для всех хостов)
-3. Выберите действие из меню
-4. Следуйте инструкциям для выполнения команд
+1. Run `python3 app/main.py --cli`
+2. Enter prefix when prompted (or Enter for all hosts)
+3. Select action from menu
+4. Follow instructions for command execution
+5. Confirm security prompts when presented
 
-### Управление хостами
+### Host Management
 
-- **Чекбоксы хостов**: Клик по чекбоксу выбирает/снимает выбор хоста
-- **Чекбоксы групп**: Клик выбирает/снимает всю группу
-- **Двойной клик**: Показывает информацию о хосте
-- **Правый клик**: Контекстное меню с дополнительными действиями
-- **Сворачивание групп**: Кнопки "Развернуть все" / "Свернуть все"
+- **Host Checkboxes**: Click checkbox to select/deselect host
+- **Group Checkboxes**: Click to select/deselect entire group
+- **Double Click**: Shows host information dialog
+- **Right Click**: Context menu with additional actions
+- **Group Folding**: "Expand All" / "Collapse All" buttons
 
-## Конфигурация
+## Configuration
 
-Все настройки находятся в файле `config.py`:
+All settings are located in `config.py`:
 
-- **GUI настройки**: размеры окна, шрифты, цвета
-- **SSH параметры**: тайм-ауты, пути к конфигурации
-- **Символы интерфейса**: чекбоксы
-- **Сообщения**: тексты уведомлений
-- **Значения по умолчанию**: начальные настройки
+- **GUI Settings**: window sizes, fonts, colors
+- **SSH Parameters**: timeouts, configuration paths
+- **Security Policies**: dangerous commands, confirmation requirements
+- **Logging Settings**: audit log location and format
+- **Interface Symbols**: checkboxes, icons
+- **Messages**: notification texts
+- **Default Values**: initial settings
 
-Для изменения настроек отредактируйте соответствующие значения в `config.py`.
+To modify settings, edit the corresponding values in `config.py`.
 
-## Архитектура проекта
+## Security Configuration
 
-- `main.py` - Главная точка входа с поддержкой аргументов командной строки
-- `config.py` - Централизованная конфигурация всех настроек *(НОВЫЙ)*
-- `cli_args.py` - Обработка аргументов командной строки *(НОВЫЙ)*
-- `command_executor_gui_app.py` - реализация графического интерфейса (используется `main.py`)
-- `command_executor_cli_app.py` - реализация консольного интерфейса (используется `main.py`)
-- `ssh_config_parser.py` - Парсер SSH конфигурации с группировкой
-- `ssh_executor.py` - Выполнение SSH команд и тестирование подключений
-- `run_gui.sh` - Скрипт автоматического запуска
-- `README.md` - Документация по использованию
-- `CHANGES.md` - Журнал изменений и резюме обновлений (см. ниже)
+Security policies can be customized in `config.py`:
 
-## Примеры использования
+```python
+SECURITY = {
+    "dangerous_commands": [
+        "rm -rf", "dd if=", "mkfs", "format", ...
+    ],
+    "require_confirmation": [
+        "sudo", "systemctl", "service", "mount", ...
+    ]
+}
+```
+
+## Project Architecture
+
+- `main.py` - Main entry point with command-line argument support
+- `config.py` - Centralized configuration for all settings
+- `cli_args.py` - Command-line argument processing
+- `command_executor_gui_app.py` - GUI implementation with security dialogs
+- `command_executor_cli_app.py` - CLI implementation with security prompts
+- `ssh_config_parser.py` - SSH configuration parser with grouping
+- `ssh_executor.py` - SSH command execution with logging and security checks
+- `run_gui.sh` - Automatic launch script
+- `README.md` - Usage documentation
+- `SECURITY_IMPROVEMENTS.md` - Security features documentation
+
+## Example Use Cases
 
 ```bash
-# Быстрый старт
+# Quick start
 python3 app/main.py
 
-# Работа с конкретными хостами
+# Work with specific hosts
 python3 app/main.py --prefix web --gui
 
-# Отладка проблем
+# Debug problems
 python3 app/main.py --debug --test-config
 
-# Массовая работа
+# Batch operations with security
 python3 app/main.py --cli --prefix prod --verbose
 ```
 
-## Требования
+## Security Examples
+
+### Dangerous Command (Blocked)
+
+```bash
+Command: rm -rf /
+Result: BLOCKED - "Command contains potentially dangerous pattern: 'rm -rf'"
+```
+
+### System Command (Requires Confirmation)
+
+```bash
+Command: sudo systemctl restart nginx
+GUI: Shows confirmation dialog with host list
+CLI: Prompts "Continue execution? (y/N)"
+```
+
+## Requirements
 
 - Python 3.6+
-- tkinter (для GUI, обычно входит в состав Python)
-- SSH клиент (openssh-client)
-- Доступ к ~/.ssh/config или указанному конфигурационному файлу
-
----
-
-**Command Executor** - Профессиональный инструмент для управления SSH подключениями
-
+- tkinter (for GUI, usually included with Python)
+- SSH client (openssh-client)
+- Access to ~/.ssh/config or specified configuration file

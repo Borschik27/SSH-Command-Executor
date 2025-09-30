@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 
-# Выполнение SSH команд и тестирование подключений.
-
 import subprocess
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 from config import Config
 
+
 class SSHExecutor:
-    # Класс для выполнения SSH команд
-    
+    # Class for executing SSH commands
+
     def __init__(
         self,
         ssh_config_path: Optional[str] = None,
@@ -17,176 +16,240 @@ class SSHExecutor:
         connect_timeout: Optional[int] = None,
         command_timeout: Optional[int] = None,
         batch_mode: Optional[bool] = None,
-        strict_host_key_checking: Optional[bool] = None
+        strict_host_key_checking: Optional[bool] = None,
     ):
-        """
-        Args:
-            ssh_config_path: Путь к SSH config файлу. По умолчанию ~/.ssh/config.
-            connect_timeout: Тайм-аут подключения SSH.
-            command_timeout: Тайм-аут выполнения команды.
-            batch_mode: Признак использования BatchMode.
-            strict_host_key_checking: Флаг StrictHostKeyChecking.
-        """
+        # Args:
+        #     ssh_config_path: Path to SSH config file. Default ~/.ssh/config.
+        #     connect_timeout: SSH connection timeout.
+        #     command_timeout: Command execution timeout.
+        #     batch_mode: BatchMode usage flag.
+        #     strict_host_key_checking: StrictHostKeyChecking flag.
 
         self.ssh_config_path = Config.get_ssh_config_path(ssh_config_path)
-        self.connect_timeout = connect_timeout if connect_timeout is not None else Config.SSH_CONNECT_TIMEOUT
-        self.command_timeout = command_timeout if command_timeout is not None else Config.SSH_COMMAND_TIMEOUT
+        self.connect_timeout = (
+            connect_timeout
+            if connect_timeout is not None
+            else Config.SSH_CONNECT_TIMEOUT
+        )
+        self.command_timeout = (
+            command_timeout
+            if command_timeout is not None
+            else Config.SSH_COMMAND_TIMEOUT
+        )
         self.batch_mode = Config.SSH_BATCH_MODE if batch_mode is None else batch_mode
         self.strict_host_key_checking = (
-            Config.SSH_STRICT_HOST_KEY_CHECKING if strict_host_key_checking is None else strict_host_key_checking
+            Config.SSH_STRICT_HOST_KEY_CHECKING
+            if strict_host_key_checking is None
+            else strict_host_key_checking
         )
-        
-    def execute_command(self, hostname: str, command: str, timeout: Optional[int] = None) -> Dict[str, Any]:
-        # Выполняем команду на удаленном хосте
+
+    def execute_command(
+        self, hostname: str, command: str, timeout: Optional[int] = None
+    ) -> Dict[str, Any]:
+        # Execute a command on a remote host
         # Args:
-        #   hostname: Имя хоста из SSH конфигурации
-        #   command: Команда для выполнения
-        #   timeout: Тайм-аут выполнения в секундах
+        #   hostname: Host alias from the SSH configuration
+        #   command: Command to execute
+        #   timeout: Command timeout in seconds
         # Returns:
-        #   Словарь с результатами выполнения
+        #   Dictionary with command execution results
         effective_timeout = timeout if timeout is not None else self.command_timeout
 
         try:
-            # Формируем SSH команду
+            # Build SSH command
             ssh_cmd = [
-                'ssh',
-                '-F', self.ssh_config_path,
-                '-o', f'ConnectTimeout={self.connect_timeout}'
+                "ssh",
+                "-F",
+                self.ssh_config_path,
+                "-o",
+                f"ConnectTimeout={self.connect_timeout}",
             ]
 
             if self.batch_mode:
-                ssh_cmd.extend(['-o', 'BatchMode=yes'])
+                ssh_cmd.extend(["-o", "BatchMode=yes"])
             else:
-                ssh_cmd.extend(['-o', 'BatchMode=no'])
+                ssh_cmd.extend(["-o", "BatchMode=no"])
 
-            ssh_cmd.extend([
-                '-o', f'StrictHostKeyChecking={"yes" if self.strict_host_key_checking else "no"}',
-                hostname,
-                command
-            ])
+            ssh_cmd.extend(
+                [
+                    "-o",
+                    f'StrictHostKeyChecking={"yes" if self.strict_host_key_checking else "no"}',
+                    hostname,
+                    command,
+                ]
+            )
 
             process = subprocess.run(
                 ssh_cmd,
                 capture_output=True,
                 text=True,
                 timeout=effective_timeout,
-                encoding='utf-8',
-                errors='replace'
+                encoding="utf-8",
+                errors="replace",
             )
-            
-            return {
-                'success': process.returncode == 0,
-                'output': process.stdout.strip() if process.stdout else '',
-                'error': process.stderr.strip() if process.stderr else '',
-                'return_code': process.returncode,
-                'hostname': hostname,
-                'command': command
+
+            result = {
+                "success": process.returncode == 0,
+                "output": process.stdout.strip() if process.stdout else "",
+                "error": process.stderr.strip() if process.stderr else "",
+                "return_code": process.returncode,
+                "hostname": hostname,
+                "command": command,
             }
+            self._log_command(hostname, command, result)
+            return result
 
         except subprocess.TimeoutExpired:
-            return {
-                'success': False,
-                'output': '',
-                'error': f'Тайм-аут выполнения команды ({effective_timeout}с)',
-                'return_code': -1,
-                'hostname': hostname,
-                'command': command
+            result = {
+                "success": False,
+                "output": "",
+                "error": f"Command execution timeout ({effective_timeout}s)",
+                "return_code": -1,
+                "hostname": hostname,
+                "command": command,
             }
-        
+            self._log_command(hostname, command, result)
+            return result
+
         except FileNotFoundError:
-            return {
-                'success': False,
-                'output': '',
-                'error': 'SSH клиент не найден. Убедитесь, что OpenSSH установлен.',
-                'return_code': -1,
-                'hostname': hostname,
-                'command': command
+            result = {
+                "success": False,
+                "output": "",
+                "error": "SSH client not found. Make sure OpenSSH is installed.",
+                "return_code": -1,
+                "hostname": hostname,
+                "command": command,
             }
-        
+            self._log_command(hostname, command, result)
+            return result
+
         except Exception as e:
-            return {
-                'success': False,
-                'output': '',
-                'error': f'Неожиданная ошибка: {str(e)}',
-                'return_code': -1,
-                'hostname': hostname,
-                'command': command
+            result = {
+                "success": False,
+                "output": "",
+                "error": f"Unexpected error: {str(e)}",
+                "return_code": -1,
+                "hostname": hostname,
+                "command": command,
             }
-    
-    def execute_command_batch(self, hostnames: list, command: str, timeout: Optional[int] = None) -> Dict[str, Dict[str, Any]]:
-        # Выполняем команду на нескольких хостах
+            self._log_command(hostname, command, result)
+            return result
+
+    def _log_command(self, hostname: str, command: str, result: Dict[str, Any]) -> None:
+        # Log executed command using configuration settings
+        if not Config.LOG_ENABLED:
+            return
+
+        try:
+            import datetime
+
+            # Ensure log directory exists
+            Config.ensure_log_dir()
+
+            # Resolve log file path
+            log_file = Config.get_log_file_path()
+
+            # Compose log entry
+            timestamp = datetime.datetime.now().strftime(Config.LOG_TIMESTAMP_FORMAT)
+            log_entry = (
+                f"[{timestamp}] HOST: {hostname} | "
+                f"CMD: {command} | "
+                f"SUCCESS: {result['success']} | "
+                f"RC: {result['return_code']}"
+            )
+
+            # Append to log file
+            with open(log_file, "a", encoding="utf-8") as f:
+                f.write(log_entry + "\n")
+
+        except Exception:  # nosec
+            # If logging fails, continue without interrupting execution
+            pass
+
+    def execute_command_batch(
+        self, hostnames: list, command: str, timeout: Optional[int] = None
+    ) -> Dict[str, Dict[str, Any]]:
+        # Execute a command on multiple hosts
         # Args:
-        #   hostnames: Список имен хостов
-        #   command: Команда для выполнения
-        #   timeout: Тайм-аут выполнения в секундах
+        #   hostnames: List of host aliases
+        #   command: Command to execute
+        #   timeout: Command timeout in seconds
         # Returns:
-        #   Словарь с результатами для каждого хоста
+        #   Dictionary with results for each host
         results = {}
-        
+
         for hostname in hostnames:
             results[hostname] = self.execute_command(hostname, command, timeout)
-            
+
         return results
-    
+
     def test_connection(self, hostname: str) -> Dict[str, Any]:
-        # Тест подключения к хосту
+        # Test connectivity to a host
         # Args:
-        #   hostname: Имя хоста
+        #   hostname: Host alias
         # Returns:
-        #   Результат тестирования подключения
+        #   Result of the connectivity test
         return self.execute_command(
             hostname,
             'echo "SSH connection test successful"',
-            timeout=self.connect_timeout
+            timeout=self.connect_timeout,
         )
-    
+
     def get_host_info(self, hostname: str) -> Dict[str, Any]:
-        # Базовуя информация о хосте
+        # Retrieve basic information about a host
         # Args:
-        #   hostname: Имя хоста
+        #   hostname: Host alias
         # Returns:
-        #   Информация о хосте
+        #   Host information
         commands = {
-            'hostname': 'hostname',
-            'uptime': 'uptime',
-            'os': 'uname -a',
-            'whoami': 'whoami'
+            "hostname": "hostname",
+            "uptime": "uptime",
+            "os": "uname -a",
+            "whoami": "whoami",
         }
-        
+
         results = {}
         for key, cmd in commands.items():
             result = self.execute_command(hostname, cmd, timeout=self.command_timeout)
-            results[key] = result['output'] if result['success'] else f"Ошибка: {result['error']}"
-            
+            results[key] = (
+                result["output"] if result["success"] else f"Error: {result['error']}"
+            )
+
         return results
 
-def test_ssh_executor():    
+
+def test_ssh_executor():
     from config import Config
-    
-    if Config.TEST_SETTINGS['enable_debug_output']:
-        print(f"{Config.get_cli_symbol('rocket')} Тестирование SSH Executor...")
-        
-        # Создаем экземпляр
+
+    if Config.TEST_SETTINGS["enable_debug_output"]:
+        print(f"{Config.get_cli_symbol('rocket')} Testing SSH Executor...")
+
+        # Create executor instance
         executor = SSHExecutor()
-        
-        test_hosts = ['localhost']  # Замените на реальные хосты из вашего конфига
-        
+
+        test_hosts = ["localhost"]  # Replace with real hosts from your configuration
+
         for host in test_hosts:
-            print(f"\n{Config.get_cli_symbol('search')} Тестирование хоста: {host}")
-            
-            # Тест подключения
+            print(f"\n{Config.get_cli_symbol('search')} Testing host: {host}")
+
+            # Test connection
             result = executor.test_connection(host)
-            if result['success']:
-                print(f"{Config.get_cli_symbol('success')} Подключение успешно: {result['output']}")
-                
-                # Получаем информацию о хосте
+            if result["success"]:
+                print(
+                    f"{Config.get_cli_symbol('success')} Connection successful: {result['output']}"
+                )
+
+                # Get host information
                 info = executor.get_host_info(host)
-                print(f"{Config.get_cli_symbol('computer')} Информация о хосте:")
+                print(f"{Config.get_cli_symbol('computer')} Host information:")
                 for key, value in info.items():
                     print(f"  {key}: {value}")
-                    
+
             else:
-                print(f"{Config.get_cli_symbol('error')} Ошибка подключения: {result['error']}")
+                print(
+                    f"{Config.get_cli_symbol('error')} Connection error: {result['error']}"
+                )
+
 
 if __name__ == "__main__":
     test_ssh_executor()
