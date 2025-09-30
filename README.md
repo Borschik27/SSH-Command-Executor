@@ -31,7 +31,7 @@ A tool for executing SSH commands with both graphical and console interfaces
 
 ## GUI Capabilities
 
-<img width="1011" height="731" alt="Screenshot 2025-09-30 131604" src="https://github.com/user-attachments/assets/8bcc702e-f26d-4da0-8888-9edc4394cb35" />
+  <img width="1011" height="731" alt="Screenshot 2025-09-30 131604" src="https://github.com/user-attachments/assets/8bcc702e-f26d-4da0-8888-9edc4394cb35" />
 
 - Checkboxes for selecting hosts and groups
 - Alphabetical host grouping with natural sorting
@@ -67,6 +67,17 @@ python3 app/main.py --help
 
 # Launch via shell script (auto-detects GUI/CLI)
 ./run.sh
+```
+
+Also you can run the application on Windows using PowerShell:
+
+1. Install Python 3.6+ from [python.org](https://www.python.org/downloads/)
+2. Run PowerShell commands:
+
+```pc
+# Start in Windows (PowerShell)
+PS > cd "$env:USERPROFILE\path\to\project"
+PS > py -<py_version> .\app\main.py --config "$env:USERPROFILE\path\to\config" --gui
 ```
 
 ### Commands with Parameters

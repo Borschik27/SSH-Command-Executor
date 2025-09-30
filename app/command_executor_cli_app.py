@@ -55,10 +55,14 @@ def main(args=None):
         print(f"{Config.get_cli_symbol('error')} Groups not found")
 
     if not prefix:
-        print("\nHost filter configuration")
-        prefix = input("Enter host prefix (press Enter for all hosts): ").strip()
+        print(f"\n{Config.get_cli_symbol('success')} Host filter configuration")
+        prefix = input(
+            f"{Config.get_cli_symbol('rocket')} Enter host prefix (press Enter for all hosts): "
+        ).strip()
     else:
-        print(f"\nUsing prefix from arguments: '{prefix}'")
+        print(
+            f"\n{Config.get_cli_symbol('info')} Using prefix from arguments: '{prefix}'"
+        )
 
     print(f"\n{Config.get_cli_symbol('satellite')} Loading hosts...")
     groups = parser.get_grouped_hosts_with_prefix(prefix)
@@ -114,12 +118,18 @@ def main(args=None):
         print("0. Exit")
 
         try:
-            choice = input("\nEnter action number: ").strip()
+            choice = input(
+                f"\n{Config.get_cli_symbol('rocket')} Enter action number: "
+            ).strip()
+
+            if choice not in {"0", "1", "2", "3", "4"}:
+                print(f"{Config.get_cli_symbol('error')} Invalid choice. Try again.")
+                continue
 
             if choice == "0":
                 print(Config.get_message("goodbye"))
                 break
-            if choice == "1":
+            elif choice == "1":
                 execute_command_on_hosts(host_index, executor)
             elif choice == "2":
                 show_host_info(host_index, parser)
@@ -127,8 +137,6 @@ def main(args=None):
                 test_host_connection(host_index, executor)
             elif choice == "4":
                 show_hosts_list(host_index, parser)
-            else:
-                print(f"{Config.get_cli_symbol('error')} Invalid choice. Try again.")
 
         except KeyboardInterrupt:
             print(f"\n\n{Config.get_cli_symbol('wave')} Exit by Ctrl+C")
@@ -168,6 +176,34 @@ def parse_host_range(user_input: str, hosts_count: int) -> List[int]:
     return sorted(set(valid_hosts))
 
 
+def prompt_host_selection(
+    host_index: Dict[int, str], *, allow_empty: bool = False
+) -> List[int]:
+    """Prompt the user for host numbers supporting comma lists and ranges."""
+
+    if not host_index:
+        return []
+
+    prompt = (
+        f"{Config.get_cli_symbol('rocket')} Enter host number(s) (1-{len(host_index)}), "
+        "e.g. 1,3-5: "
+    )
+
+    user_input = input(prompt).strip()
+
+    if not user_input:
+        if not allow_empty:
+            print(f"{Config.get_cli_symbol('error')} No hosts selected")
+        return []
+
+    selected_numbers = parse_host_range(user_input, len(host_index))
+    if not selected_numbers:
+        print(f"{Config.get_cli_symbol('error')} Enter valid host numbers")
+        return []
+
+    return selected_numbers
+
+
 def execute_command_on_hosts(host_index: Dict[int, str], executor: SSHExecutor) -> None:
     print(f"\n{Config.get_cli_symbol('rocket')} Execute command on hosts")
     print("-" * 40)
@@ -176,16 +212,9 @@ def execute_command_on_hosts(host_index: Dict[int, str], executor: SSHExecutor) 
         print(f"{Config.get_cli_symbol('error')} No available hosts")
         return
 
-    print(f"Available hosts: 1-{len(host_index)}")
-    host_input = input("Enter host numbers (for example: 1,3,5-8): ").strip()
-
-    if not host_input:
-        print(f"{Config.get_cli_symbol('error')} No hosts selected")
-        return
-
-    selected_numbers = parse_host_range(host_input, len(host_index))
+    print(f"{Config.get_cli_symbol('computer')} Available hosts: 1-{len(host_index)}")
+    selected_numbers = prompt_host_selection(host_index)
     if not selected_numbers:
-        print(f"{Config.get_cli_symbol('error')} Invalid host numbers")
         return
 
     selected_hosts = [host_index[i] for i in selected_numbers]
@@ -194,12 +223,17 @@ def execute_command_on_hosts(host_index: Dict[int, str], executor: SSHExecutor) 
     for idx, host in enumerate(selected_hosts, 1):
         print(f"  {idx}. {host}")
 
-    command = input("\nEnter command to execute: ").strip()
+    command = input(
+        f"\n{Config.get_cli_symbol('rocket')} Enter command to execute: "
+    ).strip()
     if not command:
         print(f"{Config.get_cli_symbol('error')} Command not provided")
         return
 
-    use_sudo = input("Use sudo? (y/N): ").strip().lower() == "y"
+    use_sudo = (
+        input(f"{Config.get_cli_symbol('search')} Use sudo? (y/N): ").strip().lower()
+        == "y"
+    )
     if use_sudo and not command.startswith("sudo "):
         command = f"sudo {command}"
 
@@ -231,7 +265,7 @@ def execute_command_on_hosts(host_index: Dict[int, str], executor: SSHExecutor) 
     print("=" * Config.CLI_SEPARATOR_LENGTH)
 
     for idx, host in enumerate(selected_hosts, 1):
-        print(f"\n[{idx}/{len(selected_hosts)}] 🖥️  {host}")
+        print(f"\n[{idx}/{len(selected_hosts)}]  {host}")
         print("-" * 30)
         try:
             result = executor.execute_command(host, command)
@@ -264,55 +298,56 @@ def show_host_info(host_index: Dict[int, str], parser: SSHConfigParser) -> None:
     print(f"\n{Config.get_cli_symbol('clipboard')} Host information")
     print("-" * 30)
 
-    try:
-        host_num = int(input(f"Enter host number (1-{len(host_index)}): "))
-    except ValueError:
-        print(f"{Config.get_cli_symbol('error')} Enter a valid number")
+    selected_numbers = prompt_host_selection(host_index)
+    if not selected_numbers:
         return
 
-    if host_num not in host_index:
-        print(f"{Config.get_cli_symbol('error')} Invalid host number")
-        return
+    for host_num in selected_numbers:
+        hostname = host_index.get(host_num)
+        if hostname is None:
+            print(f"{Config.get_cli_symbol('error')} Host #{host_num} not found")
+            continue
 
-    hostname = host_index[host_num]
-    info = parser.get_host_info(hostname)
+        info = parser.get_host_info(hostname)
 
-    print(f"\n{Config.get_cli_symbol('computer')} Host: {hostname}")
-    print("=" * 40)
+        print(f"\n{Config.get_cli_symbol('computer')} Host #{host_num}: {hostname}")
+        print("=" * 40)
 
-    if info:
-        for key, value in info.items():
-            print(f"{key:15s}: {value}")
-    else:
-        print("Host information not found")
+        if info:
+            for key, value in info.items():
+                print(f"{key:15s}: {value}")
+        else:
+            print("Host information not found")
 
 
 def test_host_connection(host_index: Dict[int, str], executor: SSHExecutor) -> None:
-    print("\nTest connection")
+    print(f"\n{Config.get_cli_symbol('search')} Test connection")
     print("-" * 25)
 
-    try:
-        host_num = int(input(f"Enter host number (1-{len(host_index)}): "))
-    except ValueError:
-        print(f"{Config.get_cli_symbol('error')} Enter a valid number")
+    selected_numbers = prompt_host_selection(host_index)
+    if not selected_numbers:
         return
 
-    if host_num not in host_index:
-        print(f"{Config.get_cli_symbol('error')} Invalid host number")
-        return
+    for host_num in selected_numbers:
+        hostname = host_index.get(host_num)
+        if hostname is None:
+            print(f"{Config.get_cli_symbol('error')} Host #{host_num} not found")
+            continue
 
-    hostname = host_index[host_num]
-    print(f"{Config.get_cli_symbol('search')} Testing connection to {hostname}...")
+        print(f"{Config.get_cli_symbol('search')} Testing connection to {hostname}...")
 
-    result = executor.test_connection(hostname)
-    if result["success"]:
-        print(f"{Config.get_cli_symbol('success')} Connection successful")
-        if result["output"]:
-            print(f"Response: {result['output']}")
-    else:
-        print(f"{Config.get_cli_symbol('error')} Connection error")
-        if result["error"]:
-            print(f"Error: {result['error']}")
+        result = executor.test_connection(hostname)
+        if result["success"]:
+            print(f"{Config.get_cli_symbol('success')} Connection successful")
+            if result["output"]:
+                print(f"Response: {result['output']}")
+        else:
+            print(f"{Config.get_cli_symbol('error')} Connection error")
+            if result["error"]:
+                print(f"Error: {result['error']}")
+
+        if host_num != selected_numbers[-1]:
+            print("-" * 25)
 
 
 def show_hosts_list(host_index: Dict[int, str], parser: SSHConfigParser) -> None:

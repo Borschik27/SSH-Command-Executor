@@ -144,8 +144,8 @@ class Config:
         "execution_start": "{rocket} Executing command: {command}",
         "execution_hosts": "{satellite} On hosts: {hosts}",
         "execution_finish": "{finish} Execution completed on {count} hosts",
-        "goodbye": f"{SYMBOLS['wave']} Goodbye!",
-        "goodbye_cli": f"{SYMBOLS['wave']} Exit with Ctrl+C",
+        "goodbye": "Goodbye!",
+        "goodbye_cli": "Exit with Ctrl+C",
     }
 
     # Default settings
