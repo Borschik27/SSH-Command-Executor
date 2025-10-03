@@ -69,7 +69,7 @@ python3 app/main.py --help
 ./run.sh
 ```
 
-Also you can run the application on Windows using PowerShell:
+You can also run the application on Windows using PowerShell:
 
 1. Install Python 3.6+ from [python.org](https://www.python.org/downloads/)
 2. Run PowerShell commands:
@@ -77,8 +77,10 @@ Also you can run the application on Windows using PowerShell:
 ```powershell
 # Start in Windows (PowerShell)
 PS > cd "$env:USERPROFILE\path\to\project"
-PS > py -<py_version> .\app\main.py --config "$env:USERPROFILE\path\to\config" --gui
+PS > py -3.11 .\app\main.py --config "$env:USERPROFILE\path\to\config" --gui
 ```
+
+> Replace `-3.11` with the version flag that matches your local Python installation.
 
 ### Commands with Parameters
 

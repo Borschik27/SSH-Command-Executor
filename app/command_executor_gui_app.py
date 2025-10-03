@@ -477,9 +477,21 @@ class CommandExecutorApp:
         if hostname in self.selected_hosts:
             self.selected_hosts.remove(hostname)
             self.hosts_tree.set(host_id, "checkbox", Config.get_gui_symbol("unchecked"))
+            tags = list(self.hosts_tree.item(host_id, "tags"))
+            if "selected_host" in tags:
+                tags.remove("selected_host")
+            if "unselected_host" not in tags:
+                tags.append("unselected_host")
+            self.hosts_tree.item(host_id, tags=tuple(tags))
         else:
             self.selected_hosts.add(hostname)
             self.hosts_tree.set(host_id, "checkbox", Config.get_gui_symbol("checked"))
+            tags = list(self.hosts_tree.item(host_id, "tags"))
+            if "unselected_host" in tags:
+                tags.remove("unselected_host")
+            if "selected_host" not in tags:
+                tags.append("selected_host")
+            self.hosts_tree.item(host_id, tags=tuple(tags))
 
         self.update_selection_info()
 
@@ -636,7 +648,13 @@ class CommandExecutorApp:
         if self.context_item:
             tags = self.hosts_tree.item(self.context_item, "tags")
             if "host" in tags:
-                self.toggle_host_selection(self.context_item)
+                hostname = self._get_hostname_for_item(self.context_item)
+                if hostname and hostname not in self.selected_hosts:
+                    self.selected_hosts.add(hostname)
+                    self.hosts_tree.set(
+                        self.context_item, "checkbox", Config.get_gui_symbol("checked")
+                    )
+                    self.update_selection_info()
 
     def context_deselect_host(self):
         # Deselect host from context menu
@@ -866,9 +884,7 @@ class CommandExecutorApp:
                     result = self.ssh_executor.execute_command(host, command)
                     if result["success"]:
                         if verbose_enabled:
-                            self.append_result(
-                                f"Success:\n{result['output']}\n"
-                            )
+                            self.append_result(f"Success:\n{result['output']}\n")
                             if result["error"]:
                                 self.append_result(f"Warnings:\n{result['error']}\n")
                         else:
@@ -881,9 +897,7 @@ class CommandExecutorApp:
                             self.append_result(f"{output.replace(chr(10), ' ')}\n")
                     else:
                         if verbose_enabled:
-                            self.append_result(
-                                f"Error:\n{result['error']}\n"
-                            )
+                            self.append_result(f"Error:\n{result['error']}\n")
                         else:
                             error = (
                                 result["error"][:100] + "..."

@@ -24,18 +24,21 @@ class SSHConfigParserFilteringTests(unittest.TestCase):
 
     def test_pattern_hosts_are_excluded_from_results(self):
         config_content = """
-Host *
-  User default
+        Host *
+          User default
 
-Host web-*
-  User deploy
+        Host !bastion
+          User skip
 
-Host app-production
-  HostName prod.example.com
+        Host web-*
+          User deploy
 
-Host db01 db02
-  HostName db.internal
-"""
+        Host app-production
+          HostName prod.example.com
+
+        Host db01 db02
+          HostName db.internal
+        """
         config_path = self._make_config(config_content)
 
         parser = SSHConfigParser(str(config_path))
@@ -46,6 +49,7 @@ Host db01 db02
         self.assertIn("db02", hosts)
         self.assertNotIn("*", hosts)
         self.assertNotIn("web-*", hosts)
+        self.assertNotIn("!bastion", hosts)
 
         all_hosts = parser.get_all_hosts()
         self.assertEqual(sorted(hosts), sorted(all_hosts))

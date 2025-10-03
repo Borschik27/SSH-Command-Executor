@@ -10,7 +10,11 @@ from config import Config
 def _is_pattern_host(alias: str) -> bool:
     if not alias:
         return True
-    return alias == "*" or any(char in alias for char in "*?")
+    if alias == "*":
+        return True
+    if alias.startswith("!"):
+        return True
+    return any(char in alias for char in "*?")
 
 
 def natural_sort_key(hostname: str) -> tuple:
