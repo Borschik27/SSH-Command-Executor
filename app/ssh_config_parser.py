@@ -128,8 +128,8 @@ class SSHConfigParser:
                     hosts[alias] = {"Host": alias}
                 continue
 
-            # Process other directives
-            if current_hosts and " " in line:
+            # Process other directives (handle spaces, tabs, multiple whitespace)
+            if current_hosts and line:
                 parts = line.split(None, 1)
                 if len(parts) == 2:
                     key, value = parts

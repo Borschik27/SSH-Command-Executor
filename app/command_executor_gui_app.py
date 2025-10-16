@@ -221,7 +221,7 @@ class CommandExecutorApp:
         command_frame.rowconfigure(4, weight=1)  # Update row number for stretching
 
         # Command input field
-        ttk.Label(command_frame, text="Command to execute:").grid(
+        ttk.Label(command_frame, text="Command to execute (Ctrl+Enter to run):").grid(
             row=0, column=0, sticky=tk.W, pady=(0, 5)
         )
 
@@ -255,13 +255,42 @@ class CommandExecutorApp:
         cmd_input_frame = ttk.Frame(command_frame)
         cmd_input_frame.grid(row=2, column=0, sticky=(tk.W, tk.E), pady=(0, 10))
         cmd_input_frame.columnconfigure(0, weight=1)
+        cmd_input_frame.rowconfigure(0, weight=1)
 
-        self.command_entry = ttk.Entry(
-            cmd_input_frame, font=Config.GUI_COMMAND_ENTRY_FONT
+        # Multiline command input field
+        self.command_text = tk.Text(
+            cmd_input_frame,
+            font=Config.GUI_COMMAND_ENTRY_FONT,
+            height=4,  # 4 lines by default
+            wrap=tk.WORD,
         )
-        self.command_entry.grid(row=0, column=0, sticky=(tk.W, tk.E))
-        self.command_entry.bind("<Return>", lambda e: self.execute_command())
-        self.command_entry.bind("<KeyRelease>", lambda e: self.update_selection_info())
+        self.command_text.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+
+        # Add scrollbar for command input field
+        cmd_scrollbar = ttk.Scrollbar(
+            cmd_input_frame, orient=tk.VERTICAL, command=self.command_text.yview
+        )
+        cmd_scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
+        self.command_text.configure(yscrollcommand=cmd_scrollbar.set)
+
+        # Hotkey bindings: Ctrl+Enter to execute
+        self.command_text.bind("<Control-Return>", lambda e: self.execute_command())
+        self.command_text.bind("<KeyRelease>", lambda e: self.update_selection_info())
+
+        # Template buttons for commands
+        templates_frame = ttk.Frame(cmd_input_frame)
+        templates_frame.grid(
+            row=1, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(5, 0)
+        )
+
+        ttk.Label(templates_frame, text="Templates:").pack(side=tk.LEFT, padx=(0, 5))
+
+        ttk.Button(
+            templates_frame,
+            text="Heredoc",
+            command=self.insert_heredoc_template,
+            width=8,
+        ).pack(side=tk.LEFT, padx=2)
 
         # Results area
         ttk.Label(command_frame, text="Execution Results:").grid(
@@ -327,7 +356,7 @@ class CommandExecutorApp:
 
         self.execute_button = ttk.Button(
             button_frame,
-            text="Execute Command",
+            text="Execute Command (Ctrl+Enter)",
             command=self.execute_command,
             state=tk.DISABLED,
         )
@@ -798,14 +827,14 @@ class CommandExecutorApp:
             self.status_label.config(text="Ready", foreground="green")
 
         # Enable or disable execute button
-        if count > 0 and self.command_entry.get().strip():
+        if count > 0 and self.command_text.get("1.0", tk.END).strip():
             self.execute_button.config(state=tk.NORMAL)
         else:
             self.execute_button.config(state=tk.DISABLED)
 
     def execute_command(self):
         # Execute command on selected hosts
-        base_command = self.command_entry.get().strip()
+        base_command = self.command_text.get("1.0", tk.END).strip()
         if not base_command:
             messagebox.showwarning("Warning", "Enter a command to execute")
             return
@@ -925,7 +954,7 @@ class CommandExecutorApp:
             self.root.after(0, self._reset_execute_button)
 
     def _reset_execute_button(self):
-        self.execute_button.config(state=tk.NORMAL, text="Execute Command")
+        self.execute_button.config(state=tk.NORMAL, text="Execute Command (Ctrl+Enter)")
         self.update_selection_info()
 
     def open_results_window(self):
@@ -1002,6 +1031,22 @@ class CommandExecutorApp:
         self.results_text.config(state=tk.NORMAL)
         self.results_text.delete(1.0, tk.END)
         self.results_text.config(state=tk.DISABLED)
+
+    def insert_heredoc_template(self):
+        """Inserts heredoc template for passing multiline text with EOF"""
+        template = """cat << EOF
+        # Enter your text here
+        # You can use multiple lines
+        # EOF will automatically end input
+        EOF"""
+        # Get current cursor position
+        cursor_pos = self.command_text.index(tk.INSERT)
+        # Insert template
+        self.command_text.insert(cursor_pos, template)
+        # Position cursor on comment line
+        line_num = int(cursor_pos.split(".")[0]) + 1  # Second line of template
+        self.command_text.mark_set(tk.INSERT, f"{line_num}.0")
+        self.command_text.focus()
 
 
 if __name__ == "__main__":

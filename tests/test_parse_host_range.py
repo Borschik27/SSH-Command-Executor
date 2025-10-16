@@ -46,5 +46,6 @@ class ParseHostRangeTests(unittest.TestCase):
         # Numbers should be unique and sorted even with overlapping segments
         self.assertEqual(result, [1, 2, 3, 4, 5])
 
+
 if __name__ == "__main__":  # pragma: no cover
     unittest.main()

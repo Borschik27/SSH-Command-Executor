@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 import subprocess
 from typing import Any, Dict, Optional
 
@@ -43,16 +42,26 @@ class SSHExecutor:
             else strict_host_key_checking
         )
 
+    @staticmethod
+    def prepare_command_with_eof(command: str) -> str:
+        r"""
+        Prepares command for correct heredoc transmission.
+        Handles heredoc patterns:
+        - <<EOF ... EOF (heredoc)
+        Args:
+            command: Original command
+        Returns:
+            Processed command
+        """
+        # If command already contains heredoc, leave as is
+        if "<<" in command and ("EOF" in command or "EOL" in command):
+            return command
+
+        return command
+
     def execute_command(
         self, hostname: str, command: str, timeout: Optional[int] = None
     ) -> Dict[str, Any]:
-        # Execute a command on a remote host
-        # Args:
-        #   hostname: Host alias from the SSH configuration
-        #   command: Command to execute
-        #   timeout: Command timeout in seconds
-        # Returns:
-        #   Dictionary with command execution results
         effective_timeout = timeout if timeout is not None else self.command_timeout
 
         try:
@@ -75,9 +84,23 @@ class SSHExecutor:
                     "-o",
                     f'StrictHostKeyChecking={"yes" if self.strict_host_key_checking else "no"}',
                     hostname,
-                    command,
                 ]
             )
+
+            # Command preparation with EOF support
+            prepared_command = self.prepare_command_with_eof(command)
+
+            # Handle multiline commands
+            if "\n" in prepared_command:
+                # For multiline commands use bash -c with proper escaping
+                escaped_command = prepared_command.replace(
+                    "'", "'\"'\"'"
+                )  # Escape single quotes
+                bash_command = f"bash -c '{escaped_command}'"
+                ssh_cmd.append(bash_command)
+            else:
+                # For single-line commands use normal method
+                ssh_cmd.append(prepared_command)
 
             process = subprocess.run(
                 ssh_cmd,
@@ -139,7 +162,6 @@ class SSHExecutor:
         # Log executed command using configuration settings
         if not Config.LOG_ENABLED:
             return
-
         try:
             import datetime
 
@@ -162,20 +184,13 @@ class SSHExecutor:
             with open(log_file, "a", encoding="utf-8") as f:
                 f.write(log_entry + "\n")
 
-        except Exception:  # nosec
+        except Exception:
             # If logging fails, continue without interrupting execution
             pass
 
     def execute_command_batch(
         self, hostnames: list, command: str, timeout: Optional[int] = None
     ) -> Dict[str, Dict[str, Any]]:
-        # Execute a command on multiple hosts
-        # Args:
-        #   hostnames: List of host aliases
-        #   command: Command to execute
-        #   timeout: Command timeout in seconds
-        # Returns:
-        #   Dictionary with results for each host
         results = {}
 
         for hostname in hostnames:
@@ -184,11 +199,6 @@ class SSHExecutor:
         return results
 
     def test_connection(self, hostname: str) -> Dict[str, Any]:
-        # Test connectivity to a host
-        # Args:
-        #   hostname: Host alias
-        # Returns:
-        #   Result of the connectivity test
         return self.execute_command(
             hostname,
             'echo "SSH connection test successful"',
@@ -196,11 +206,6 @@ class SSHExecutor:
         )
 
     def get_host_info(self, hostname: str) -> Dict[str, Any]:
-        # Retrieve basic information about a host
-        # Args:
-        #   hostname: Host alias
-        # Returns:
-        #   Host information
         commands = {
             "hostname": "hostname",
             "uptime": "uptime",

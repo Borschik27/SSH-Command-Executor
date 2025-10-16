@@ -7,7 +7,6 @@ import sys
 
 from config import Config
 
-
 def create_parser():
     # Command line argument parser
     parser = argparse.ArgumentParser(

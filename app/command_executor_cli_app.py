@@ -8,6 +8,43 @@ from ssh_config_parser import SSHConfigParser
 from ssh_executor import SSHExecutor
 
 
+def get_multiline_command():
+    """Get command with multiline input support"""
+    print(f"\n{Config.get_cli_symbol('rocket')} Enter command to execute:")
+    print("(Enter empty line to finish, or type single line and press Enter)")
+
+    lines = []
+    first_line = True
+
+    while True:
+        if first_line:
+            prompt = "> "
+            first_line = False
+        else:
+            prompt = "  "
+
+        try:
+            line = input(prompt)
+            if (
+                not line.strip() and lines
+            ):  # Empty line and already have content - finish
+                break
+            lines.append(line)
+            if (
+                len(lines) == 1 and line.strip()
+            ):  # If one non-empty line entered, can finish
+                # Ask if user wants to continue
+                continue_input = (
+                    input("Continue multiline input? (y/N): ").strip().lower()
+                )
+                if continue_input != "y":
+                    break
+        except EOFError:
+            break
+
+    return "\n".join(lines).strip()
+
+
 def main(args=None):
     # CLI version entry point.
     prefix = args.prefix if args and hasattr(args, "prefix") else ""
@@ -236,9 +273,7 @@ def execute_command_on_hosts(host_index: Dict[int, str], executor: SSHExecutor) 
     for idx, host in enumerate(selected_hosts, 1):
         print(f"  {idx}. {host}")
 
-    command = input(
-        f"\n{Config.get_cli_symbol('rocket')} Enter command to execute: "
-    ).strip()
+    command = get_multiline_command()
     if not command:
         print(f"{Config.get_cli_symbol('error')} Command not provided")
         return
