@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 # Console interface component for Command Executor.
 
+import time
 from typing import Dict, List
 
 from config import Config
-from ssh_config_parser import SSHConfigParser
+from ssh_config_parser import SSHConfigParser, natural_sort_key
 from ssh_executor import SSHExecutor
 
 
@@ -60,12 +61,13 @@ def main(args=None):
         if args and hasattr(args, "connect_timeout")
         else Config.SSH_CONNECT_TIMEOUT
     )
+    delay = args.delay if args and hasattr(args, "delay") else 0
     debug = args.debug if args and hasattr(args, "debug") else False
 
     if debug:
         print(
             f"[DEBUG] CLI args: prefix='{prefix}', config='{config_path}', "
-            f"timeout={timeout}, connect_timeout={connect_timeout}"
+            f"timeout={timeout}, connect_timeout={connect_timeout}, delay={delay}"
         )
 
     separator = "=" * Config.CLI_SEPARATOR_LENGTH
@@ -177,7 +179,7 @@ def main(args=None):
                 print(Config.get_message("goodbye"))
                 break
             elif choice == "1":
-                execute_command_on_hosts(host_index, executor)
+                execute_command_on_hosts(host_index, executor, delay)
             elif choice == "2":
                 show_host_info(host_index, parser)
             elif choice == "3":
@@ -254,7 +256,9 @@ def prompt_host_selection(
     return selected_numbers
 
 
-def execute_command_on_hosts(host_index: Dict[int, str], executor: SSHExecutor) -> None:
+def execute_command_on_hosts(
+    host_index: Dict[int, str], executor: SSHExecutor, delay: int = 0
+) -> None:
     print(f"\n{Config.get_cli_symbol('rocket')} Execute command on hosts")
     print("-" * 40)
 
@@ -268,6 +272,9 @@ def execute_command_on_hosts(host_index: Dict[int, str], executor: SSHExecutor) 
         return
 
     selected_hosts = [host_index[i] for i in selected_numbers]
+
+    # Sort hosts: alphabetically first, then numerically
+    selected_hosts = sorted(selected_hosts, key=natural_sort_key)
 
     print(f"{Config.get_cli_symbol('success')} Selected hosts: {len(selected_hosts)}")
     for idx, host in enumerate(selected_hosts, 1):
@@ -310,36 +317,92 @@ def execute_command_on_hosts(host_index: Dict[int, str], executor: SSHExecutor) 
 
     print(f"\n{Config.get_cli_symbol('target')} Executing command: {command}")
     print(f"{Config.get_cli_symbol('satellite')} On hosts: {', '.join(selected_hosts)}")
+    if delay > 0:
+        print(f"{Config.get_cli_symbol('info')} Delay between hosts: {delay} sec")
+    print(f"{Config.get_cli_symbol('info')} Press Ctrl+C to stop execution")
     print("=" * Config.CLI_SEPARATOR_LENGTH)
 
-    for idx, host in enumerate(selected_hosts, 1):
-        print(f"\n[{idx}/{len(selected_hosts)}]  {host}")
-        print("-" * 30)
-        try:
-            result = executor.execute_command(host, command)
-            if result["success"]:
-                print(
-                    f"{Config.get_cli_symbol('success')} Success (return code: {result['return_code']})"
-                )
-                if result["output"]:
-                    print("Output:")
-                    print(result["output"])
-                if result["error"]:
-                    print("Warnings:")
-                    print(result["error"])
-            else:
-                print(
-                    f"{Config.get_cli_symbol('error')} Error (return code: {result['return_code']})"
-                )
-                if result["error"]:
-                    print("Error:")
-                    print(result["error"])
-        except (
-            Exception
-        ) as exc:  # pragma: no cover - safeguard against unexpected CLI errors
-            print(f"{Config.get_cli_symbol('error')} Exception: {exc}")
+    # Statistics tracking
+    success_count = 0
+    error_count = 0
+    error_hosts = []
 
-    print(Config.get_message("execution_finish", count=len(selected_hosts)))
+    try:
+        for idx, host in enumerate(selected_hosts, 1):
+            print(f"\n[{idx}/{len(selected_hosts)}]  {host}")
+            print("-" * 30)
+            try:
+                result = executor.execute_command(host, command)
+                if result["success"]:
+                    success_count += 1
+                    print(f"{Config.get_cli_symbol('success')} Success ")
+                    if result["output"]:
+                        print("Output:")
+                        print(result["output"])
+                    if result["error"]:
+                        print("Warnings:")
+                        print(result["error"])
+                else:
+                    error_count += 1
+                    error_hosts.append(host)
+                    print(f"{Config.get_cli_symbol('error')} Error ")
+                    if result["error"]:
+                        print("Error:")
+                        print(result["error"])
+            except (
+                Exception
+            ) as exc:  # pragma: no cover - safeguard against unexpected CLI errors
+                error_count += 1
+                error_hosts.append(host)
+                print(f"{Config.get_cli_symbol('error')} Exception: {exc}")
+
+            # Add delay between hosts (but not after the last host)
+            if delay > 0 and idx < len(selected_hosts):
+                print(
+                    f"\n{Config.get_cli_symbol('scroll')} Waiting {delay} seconds before next host..."
+                )
+                time.sleep(delay)
+
+        # Summary report
+        print("\n" + "=" * Config.CLI_SEPARATOR_LENGTH)
+        print(f"{Config.get_cli_symbol('clipboard')} EXECUTION SUMMARY")
+        print("=" * Config.CLI_SEPARATOR_LENGTH)
+        print(
+            f"{Config.get_cli_symbol('success')} Successful: {success_count}/{len(selected_hosts)}"
+        )
+        print(
+            f"{Config.get_cli_symbol('error')} Failed: {error_count}/{len(selected_hosts)}"
+        )
+
+        if error_hosts:
+            print(f"\n{Config.get_cli_symbol('warning')} Hosts with errors:")
+            for host in error_hosts:
+                print(f"  - {host}")
+
+        print("=" * Config.CLI_SEPARATOR_LENGTH)
+
+    except KeyboardInterrupt:
+        print(
+            f"\n\n{Config.get_cli_symbol('error')} Execution stopped by user (Ctrl+C)"
+        )
+        print(
+            f"{Config.get_cli_symbol('info')} Completed: {idx}/{len(selected_hosts)} hosts"
+        )
+
+        # Summary even on interrupt
+        print("\n" + "=" * Config.CLI_SEPARATOR_LENGTH)
+        print(f"{Config.get_cli_symbol('clipboard')} EXECUTION SUMMARY (Interrupted)")
+        print("=" * Config.CLI_SEPARATOR_LENGTH)
+        print(f"{Config.get_cli_symbol('success')} Successful: {success_count}")
+        print(f"{Config.get_cli_symbol('error')} Failed: {error_count}")
+
+        if error_hosts:
+            print(f"\n{Config.get_cli_symbol('warning')} Hosts with errors:")
+            for host in error_hosts:
+                print(f"  - {host}")
+
+        print("=" * Config.CLI_SEPARATOR_LENGTH)
+        return
 
 
 def show_host_info(host_index: Dict[int, str], parser: SSHConfigParser) -> None:

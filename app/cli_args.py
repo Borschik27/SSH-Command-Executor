@@ -7,6 +7,7 @@ import sys
 
 from config import Config
 
+
 def create_parser():
     # Command line argument parser
     parser = argparse.ArgumentParser(
@@ -21,6 +22,7 @@ Usage examples:
   {sys.argv[0]} --cli              # Force CLI startup
   {sys.argv[0]} --prefix web       # Filter hosts by prefix
   {sys.argv[0]} --config custom    # Use different SSH config
+  {sys.argv[0]} --delay 5          # Add 5 second delay between hosts
   {sys.argv[0]} --version          # Show version
 
 Project files:
@@ -83,6 +85,14 @@ Project files:
         help=f"SSH connection timeout in seconds (default: {Config.SSH_CONNECT_TIMEOUT})",
     )
 
+    parser.add_argument(
+        "--delay",
+        type=int,
+        metavar="SECONDS",
+        default=0,
+        help="Delay in seconds between executing commands on hosts (0-600, default: 0)",
+    )
+
     # Debug and information
     parser.add_argument(
         "--verbose",
@@ -129,49 +139,6 @@ def parse_args(args=None):
         parser.error("Connection timeout must be a positive integer")
 
     return parsed_args
-
-
-def show_usage_examples():
-    # Show usage examples
-    print(
-        f"""
-{Config.APP_NAME} v{Config.APP_VERSION} - Usage examples:
-
-MAIN COMMANDS:
-  python3 main.py                      # Automatic interface selection
-  python3 main.py --gui                # Graphical interface
-  python3 main.py --cli                # Console interface
-
-HOST FILTERING:
-  python3 main.py --prefix web         # Only hosts starting with 'web'
-  python3 main.py --prefix prod        # Only hosts starting with 'prod'
-  python3 main.py -p db                # Short form of prefix
-
-SSH SETTINGS:
-  python3 main.py --config ~/.ssh/prod # Use different SSH config
-  python3 main.py --timeout 60         # Command timeout 60 seconds
-  python3 main.py --connect-timeout 5  # Connection timeout 5 seconds
-
-DIAGNOSTICS:
-  python3 main.py --test-config        # Check SSH configuration
-  python3 main.py --list-hosts         # Show all available hosts
-  python3 main.py --debug              # Debug mode
-  python3 main.py --verbose            # Verbose output
-
-COMBINATIONS:
-  python3 main.py --cli --prefix web --verbose
-  python3 main.py --gui --config ~/.ssh/test --debug
-
-PROJECT FILES:
-    main.py                        - Main file with auto-interface selection
-    command_executor_gui_app.py    - GUI implementation (tkinter)
-    command_executor_cli_app.py    - CLI implementation (console)
-    config.py                      - Settings and configuration
-    ssh_config_parser.py           - SSH configuration parser
-    ssh_executor.py                - SSH command execution
-    run.sh                         - Startup script
-        """.strip()
-    )
 
 
 if __name__ == "__main__":

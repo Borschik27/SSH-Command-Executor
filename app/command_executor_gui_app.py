@@ -3,11 +3,12 @@
 # GUI application component for Command Executor.
 
 import threading
+import time
 import tkinter as tk
 from tkinter import messagebox, scrolledtext, ttk
 
 from config import Config
-from ssh_config_parser import SSHConfigParser
+from ssh_config_parser import SSHConfigParser, natural_sort_key
 from ssh_executor import SSHExecutor
 
 
@@ -27,6 +28,10 @@ class CommandExecutorApp:
         self.config_parser = SSHConfigParser(ssh_config_path)
         self.ssh_executor = SSHExecutor(ssh_config_path)
         self.selected_hosts = set()
+
+        # Control flags for execution
+        self.stop_execution = threading.Event()  # Flag to stop command execution
+        self.is_executing = False  # Track if commands are currently executing
 
         # Create interface
         self.create_widgets()
@@ -249,7 +254,19 @@ class CommandExecutorApp:
             text="Verbose Output",
             variable=self.verbose_var,
         )
-        self.verbose_checkbox.pack(side=tk.LEFT)
+        self.verbose_checkbox.pack(side=tk.LEFT, padx=(0, 10))
+
+        # Delay between hosts (0-600 seconds = 10 minutes)
+        ttk.Label(options_frame, text="Delay (sec):").pack(side=tk.LEFT, padx=(5, 2))
+        self.delay_var = tk.IntVar(value=0)
+        self.delay_spinbox = ttk.Spinbox(
+            options_frame,
+            from_=0,
+            to=600,
+            width=5,
+            textvariable=self.delay_var,
+        )
+        self.delay_spinbox.pack(side=tk.LEFT)
 
         # Command input field frame
         cmd_input_frame = ttk.Frame(command_frame)
@@ -361,6 +378,14 @@ class CommandExecutorApp:
             state=tk.DISABLED,
         )
         self.execute_button.pack(side=tk.LEFT, padx=(0, 5))
+
+        self.stop_button = ttk.Button(
+            button_frame,
+            text="Stop",
+            command=self.stop_execution_command,
+            state=tk.DISABLED,
+        )
+        self.stop_button.pack(side=tk.LEFT, padx=(0, 5))
 
         self.expand_output_button = ttk.Button(
             button_frame,
@@ -874,14 +899,19 @@ class CommandExecutorApp:
             if not confirm:
                 return
 
+        # Clear stop flag and mark as executing
+        self.stop_execution.clear()
+        self.is_executing = True
+
         self.execute_button.config(state=tk.DISABLED, text="Executing...")
+        self.stop_button.config(state=tk.NORMAL)
         self.status_label.config(text="Executing commands...", foreground="orange")
 
         thread = threading.Thread(
             target=self._execute_command_thread,
             args=(
                 command,
-                sorted(self.selected_hosts, key=lambda host: host.lower()),
+                sorted(self.selected_hosts, key=natural_sort_key),
                 sudo_enabled,
                 verbose_enabled,
             ),
@@ -889,21 +919,46 @@ class CommandExecutorApp:
         thread.daemon = True
         thread.start()
 
+    def stop_execution_command(self):
+        """Stop command execution on remaining hosts"""
+        if self.is_executing:
+            self.stop_execution.set()
+            self.append_result("\nStop requested by user...\n")
+            self.status_label.config(text="Stopping execution...", foreground="red")
+            self.stop_button.config(state=tk.DISABLED)
+
     def _execute_command_thread(
         self, command, hosts, sudo_enabled: bool, verbose_enabled: bool
     ):
+        # Statistics tracking
+        success_count = 0
+        error_count = 0
+        error_hosts = []
+
         try:
             sudo_info = " (sudo)" if sudo_enabled else ""
             verbose_info = " (detailed output)" if verbose_enabled else ""
+            delay = self.delay_var.get()
 
             self.append_result(
                 f"\nExecuting command: {command}{sudo_info}{verbose_info}\n"
             )
             self.append_result(f"On hosts: {', '.join(hosts)}\n")
+            if delay > 0:
+                self.append_result(f"Delay between hosts: {delay} sec\n")
             self.append_result("=" * 60 + "\n")
 
             # Execute command on each host
-            for host in hosts:
+            executed_count = 0
+            for idx, host in enumerate(hosts):
+                # Check if stop was requested
+                if self.stop_execution.is_set():
+                    self.append_result("\nStop requested by user...\n")
+                    self.append_result(
+                        f"Executed on {executed_count}/{len(hosts)} hosts\n"
+                    )
+                    break
+
                 if verbose_enabled:
                     self.append_result(f"\nHost: {host}\n")
                 else:
@@ -912,6 +967,7 @@ class CommandExecutorApp:
                 try:
                     result = self.ssh_executor.execute_command(host, command)
                     if result["success"]:
+                        success_count += 1
                         if verbose_enabled:
                             self.append_result(f"Success:\n{result['output']}\n")
                             if result["error"]:
@@ -925,6 +981,8 @@ class CommandExecutorApp:
                             )
                             self.append_result(f"{output.replace(chr(10), ' ')}\n")
                     else:
+                        error_count += 1
+                        error_hosts.append(host)
                         if verbose_enabled:
                             self.append_result(f"Error:\n{result['error']}\n")
                         else:
@@ -936,6 +994,8 @@ class CommandExecutorApp:
                             self.append_result(f"{error.replace(chr(10), ' ')}\n")
 
                 except Exception as exc:
+                    error_count += 1
+                    error_hosts.append(host)
                     if verbose_enabled:
                         self.append_result(f"Exception: {exc}\n")
                     else:
@@ -944,17 +1004,48 @@ class CommandExecutorApp:
                 if verbose_enabled:
                     self.append_result("-" * 40 + "\n")
 
-            self.append_result(f"\nExecution completed on {len(hosts)} hosts\n")
+                executed_count += 1
+
+                # Add delay between hosts (but not after the last host)
+                if (
+                    delay > 0
+                    and idx < len(hosts) - 1
+                    and not self.stop_execution.is_set()
+                ):
+                    time.sleep(delay)
+
+            # Summary report
+            self.append_result("\n" + "=" * 60 + "\n")
+            if self.stop_execution.is_set():
+                self.append_result("EXECUTION SUMMARY (Stopped by user)\n")
+            else:
+                self.append_result("EXECUTION SUMMARY\n")
+            self.append_result("=" * 60 + "\n")
+            self.append_result(f"Successful: {success_count}/{executed_count}\n")
+            self.append_result(f"Failed: {error_count}/{executed_count}\n")
+
+            if error_hosts:
+                self.append_result("\nHosts with errors:\n")
+                for host in error_hosts:
+                    self.append_result(f"  - {host}\n")
+
+            self.append_result("=" * 60 + "\n")
 
         except Exception as exc:
             self.append_result(f"\nCritical error: {exc}\n")
 
         finally:
             # Restore button to its initial state
+            self.is_executing = False
             self.root.after(0, self._reset_execute_button)
 
     def _reset_execute_button(self):
         self.execute_button.config(state=tk.NORMAL, text="Execute Command (Ctrl+Enter)")
+        self.stop_button.config(state=tk.DISABLED)
+        self.status_label.config(
+            text=Config.MESSAGES["ready_status"],
+            foreground=Config.get_color("status_ready"),
+        )
         self.update_selection_info()
 
     def open_results_window(self):

@@ -184,9 +184,11 @@ class SSHExecutor:
             with open(log_file, "a", encoding="utf-8") as f:
                 f.write(log_entry + "\n")
 
-        except Exception:
-            # If logging fails, continue without interrupting execution
-            pass
+        except Exception as e:
+            # If logging fails, print the error to stderr for debugging
+            import sys
+
+            print(f"Logging failed in _log_command: {e}", file=sys.stderr)
 
     def execute_command_batch(
         self, hostnames: list, command: str, timeout: Optional[int] = None

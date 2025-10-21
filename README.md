@@ -17,6 +17,10 @@ A tool for executing SSH commands with both graphical and console interfaces
 - **Batch Execution**: Commands on multiple hosts simultaneously
 - **Host Information**: View SSH configuration for each host
 - **Connection Testing**: Check host availability and connectivity
+- **Stop Button (GUI)**: Interrupt command execution on remaining hosts
+- **Delay Between Hosts**: Configurable pause between host executions (0-600 seconds)
+- **Multiline Commands**: Support for heredoc and complex commands
+- **EOF Support**: Heredoc templates for passing multiline text
 
 ## Security Features
 
@@ -95,12 +99,71 @@ python3 app/main.py --config ~/.ssh/production
 # Timeout settings
 python3 app/main.py --timeout 60 --connect-timeout 5
 
+# Add delay between hosts (in seconds, 0-600)
+python3 app/main.py --delay 5
+
 # Verbose output and debugging
 python3 app/main.py --verbose --debug
+```
 
-# Combined commands
+## New Features
+
+### Stop Button (GUI Only)
+
+The **Stop** button allows you to interrupt command execution on remaining hosts:
+
+- Located next to the Execute button in the control panel
+- Disabled by default, enabled during command execution
+- Commands already running on the current host will complete
+- Results show how many hosts were completed before stopping
+- Status indicator shows "Stopping execution..." when pressed
+
+**Use cases:**
+
+- Detected issues and need to stop before affecting more hosts
+- Gradual rollouts where you want to observe results
+- Emergency stop during problematic deployments
+
+### Delay Between Hosts
+
+Control the pause between executing commands on different hosts:
+
+**GUI:**
+
+- Spinbox field in options panel: "Delay (sec)"
+- Range: 0-600 seconds (10 minutes)
+- Default: 0 (no delay)
+
+**CLI:**
+
+- Use `--delay` argument: `python3 app/main.py --delay 5`
+- Displays "Waiting X seconds before next host..." message
+
+**Use cases:**
+
+- Rate limiting to prevent overwhelming target hosts
+- Staggered deployments for gradual rollouts
+- Network congestion avoidance
+- Observing results before proceeding to next host
+
+**Example:**
+
+```bash
+# Execute with 10 second delay between hosts
+python3 app/main.py --cli --delay 10
+```
+
+### Combined Commands
+
+```bash
+# GUI with prefix and verbose output
 python3 app/main.py --gui --prefix f --verbose
+
+# CLI with custom config and debug
 python3 app/main.py --cli --config ~/.ssh/test --debug
+
+# CLI with delay and prefix filter
+python3 app/main.py --cli --prefix prod --delay 5
 ```
 
 ### Diagnostic Commands
